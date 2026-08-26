@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Network Monitor</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<header>
+  <h1 class="brand">
+    <img class="brand-logo" src="/static/img/placeholder-logo.svg"
+         alt="Network Monitor"
+         onerror="this.remove()">
+    <span class="brand-name">Network Monitor</span>
+    {% if not is_admin and auth_enabled %}<span class="view-only-badge" title="You have read-only access. Editing is limited to the admin group.">View only</span>
+    {% elif is_admin %}<span class="view-only-badge preview-only" title="Previewing the read-only (viewer) experience. You are still an admin.">View only</span>{% endif %}
+  </h1>
+
+  <div class="stat-dropdown site-dropdown" id="site-dropdown">
+    <button class="btn stat-summary" id="site-summary-btn" type="button"
+            aria-expanded="false" aria-haspopup="true" title="Location"
+            data-default="{{ default_site }}">
+      <span class="loc-dot" id="loc-dot" title="Location status"></span>
+      <span id="site-summary-text">—</span>
+      <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+    <div class="stat-menu site-menu" id="site-menu" hidden>
+      {% for s in sites %}
+      <div class="stat-menu-row site-menu-row" data-site="{{ s.key }}">
+        <span class="site-menu-name">{{ s.name }}</span>
+        {% if is_admin %}
+        <button class="site-edit-btn admin-only" type="button" title="Edit location" aria-label="Edit location">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>
+          </svg>
+        </button>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if is_admin %}
+      <div class="stat-menu-row site-menu-add admin-only" id="site-add-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add location…
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Hamburger menu. On mobile it sits on row 1 (with the logo + location); on
+       desktop `order` places it at the right end of the toolbar cluster. -->
+  <div class="menu" id="menu">
+    <button class="btn menu-toggle" id="menu-toggle" type="button" aria-expanded="false" title="Menu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <div class="menu-panel" id="menu-panel" hidden>
+      <!-- Mobile-only duplicates of the header toolbar buttons (hidden on desktop via CSS). -->
+      <button class="menu-item mobile-only" id="menu-view-log" type="button">View Log</button>
+      {% if is_admin %}
+      <button class="menu-item mobile-only admin-only" id="menu-check-now" type="button">Check Now</button>
+      {% endif %}
+      <button class="menu-item" id="btn-deleted" type="button">Deleted devices</button>
+      {% if is_admin %}
+      <button class="menu-item admin-only" id="btn-agent" type="button">Download agent</button>
+      <button class="menu-item admin-only" id="btn-settings" type="button">Settings</button>
+      <button class="menu-item" id="btn-view-as" type="button">Preview as viewer</button>
+      {% endif %}
+      {% if auth_enabled %}
+      <a class="menu-item" id="btn-logout" href="/logout">Logout</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="header-stats">
+    <button class="btn" id="btn-view-log">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+      View Log
+    </button>
+
+    {% if is_admin %}
+    <button class="btn admin-only" id="btn-check-now">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Check Now
+    </button>
+    {% endif %}
+
+    <!-- Device-count dropdown. On mobile it's the last item on row 2; on desktop
+         `order:-1` puts it first in the toolbar cluster (its original spot). -->
+    <div class="stat-dropdown" id="stat-dropdown">
+      <button class="btn stat-summary" id="stat-summary-btn" type="button"
+              aria-expanded="false" aria-haspopup="true">
+        <div class="dot" id="stat-summary-dot"></div>
+        <span id="stat-summary-text">—</span>
+        <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="stat-menu" id="stat-menu" hidden>
+        <div class="stat-menu-row" data-metric="up">
+          <div class="dot up-dot"></div>
+          <span class="stat-menu-label">Up</span><span id="stat-up">—</span>
+        </div>
+        <div class="stat-menu-row" data-metric="down">
+          <div class="dot down-dot"></div>
+          <span class="stat-menu-label">Down</span><span id="stat-down">—</span>
+        </div>
+        <div class="stat-menu-row" data-metric="unknown">
+          <div class="dot unk-dot"></div>
+          <span class="stat-menu-label">Unknown</span><span id="stat-unk">—</span>
+        </div>
+        <div class="stat-menu-row" data-metric="paused">
+          <div class="dot paused-dot"></div>
+          <span class="stat-menu-label">Paused</span><span id="stat-paused">—</span>
+        </div>
+        <div class="stat-menu-hint">Tap a status to filter the device list.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile only: forces the header to wrap after the title + hamburger row. -->
+  <div class="hdr-break" aria-hidden="true"></div>
+</header>
+
+<div id="stale-banner" hidden>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+  <span id="stale-banner-text"></span>
+</div>
+
+<div class="main">
+  <div id="map-container">
+    <svg id="map-svg"></svg>
+    <div id="tooltip"></div>
+    <!-- Aerial imagery credit; shown by map.js only while the photo is visible. -->
+    <div id="map-attrib" hidden></div>
+    <!-- Map controls, bottom-left. The photo toggle is display-only so viewers get
+         it too; Edit Map and Set map area are admin-only. map.js hides the photo
+         buttons entirely for a location with no imagery. -->
+    <div class="map-controls">
+      <!-- Mobile-only: collapses the control row into a single icon that expands on tap. -->
+      <button class="btn map-ctl-btn" id="map-ctl-toggle" type="button" aria-expanded="false" title="Map controls">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+          <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+          <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+        </svg>
+      </button>
+      {% if is_admin %}
+      <button class="btn map-ctl-btn admin-only" id="btn-edit-map" title="Edit the map layout">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        <span class="btn-label">Edit Map</span>
+      </button>
+      <button class="btn map-ctl-btn admin-only" id="btn-map-area" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M16 4h3a1 1 0 0 1 1 1v3"/>
+          <path d="M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M8 20H5a1 1 0 0 1-1-1v-3"/>
+        </svg>
+        <span class="btn-label">Set map area</span>
+      </button>
+      <button class="btn map-ctl-btn admin-only" id="btn-gather" hidden title="Pile all devices at one point to drag each to its spot">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+        </svg>
+        <span class="btn-label">Stack all</span>
+      </button>
+      <button class="btn map-ctl-btn admin-only" id="btn-set-default-view" hidden title="Save the current framing as the view everyone opens the map to (and Recenter returns to)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M16 4h3a1 1 0 0 1 1 1v3"/>
+          <path d="M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M8 20H5a1 1 0 0 1-1-1v-3"/>
+          <circle cx="12" cy="12" r="2.5"/>
+        </svg>
+        <span class="btn-label">Set opening view</span>
+      </button>
+      <button class="btn map-ctl-btn admin-only" id="btn-select" hidden title="Drag a box to select several devices, then drag them together">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+        </svg>
+        <span class="btn-label">Select</span>
+      </button>
+      {% endif %}
+      <button class="btn map-ctl-btn" id="btn-recenter" title="Recenter the map to the default view">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="7"/><line x1="12" y1="1" x2="12" y2="4"/>
+          <line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/>
+          <line x1="20" y1="12" x2="23" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+        </svg>
+        <span class="btn-label">Recenter</span>
+      </button>
+      <button class="btn map-ctl-btn" id="btn-photo" hidden aria-pressed="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="5" width="18" height="14" rx="2"/>
+          <circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 19"/>
+        </svg>
+        <span class="btn-label">Hide photo</span>
+      </button>
+      <button class="btn map-ctl-btn" id="btn-labels" hidden aria-pressed="false" title="Show or hide device labels on the map">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+          <line x1="7" y1="7" x2="7.01" y2="7"/>
+        </svg>
+        <span class="btn-label">Show labels</span>
+      </button>
+    </div>
+    {% if is_admin %}
+    <div id="map-area-hint" class="admin-only" hidden>
+      Drag a rectangle over the area the map should show.
+      <button class="btn btn-sm" id="btn-map-area-reset">Reset to default</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Drag handle to widen/narrow the device list (desktop only). -->
+  <div id="sidebar-resizer" title="Drag to resize the device list"></div>
+
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <span>Devices</span>
+      {% if is_admin %}
+      <button class="btn sidebar-add admin-only" id="btn-add-device">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Device
+      </button>
+      {% endif %}
+    </div>
+    <div class="sidebar-search">
+      <input id="device-search" type="text" placeholder="Search name, IP, or location…"
+             autocomplete="off" spellcheck="false" />
+      <div class="search-count" id="search-count" hidden></div>
+    </div>
+    <div class="sidebar-filters">
+      <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="false">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+        Filters
+      </button>
+      <div class="filter-panel" id="filter-panel" hidden>
+        <div class="filter-group">
+          <span class="filter-group-label">Type</span>
+          <label><input type="checkbox" data-filter="type" value="switch" checked /> Switches</label>
+          <label><input type="checkbox" data-filter="type" value="ap" checked /> APs</label>
+          <label><input type="checkbox" data-filter="type" value="other" checked /> Other</label>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">Monitoring</span>
+          <label><input type="checkbox" data-filter="mon" value="active" checked /> Active</label>
+          <label><input type="checkbox" data-filter="mon" value="paused" checked /><span class="dot paused-dot"></span> Paused</label>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group-label">Status</span>
+          <label><input type="checkbox" data-filter="status" value="up" checked /><span class="dot up-dot"></span> Up</label>
+          <label><input type="checkbox" data-filter="status" value="down" checked /><span class="dot down-dot"></span> Down</label>
+          <label><input type="checkbox" data-filter="status" value="unknown" checked /><span class="dot unk-dot"></span> Unknown</label>
+        </div>
+      </div>
+    </div>
+    <div id="device-list"></div>
+    <div id="last-updated"></div>
+  </aside>
+
+  <!-- Single-device detail: floats over the map, directly left of the device
+       list (positioned/sized to match it in JS). -->
+  <div id="detail-panel"></div>
+</div>
+
+<!-- Mobile-only bottom bar: toggle between the map and the devices list -->
+<nav class="view-toggle" id="view-toggle" aria-label="Switch view">
+  <button type="button" data-view="map" class="active">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+      <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+    </svg>
+    Map
+  </button>
+  <button type="button" data-view="list">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+    Devices
+  </button>
+</nav>
+
+<!-- Add Device Modal -->
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title" hidden>Add Device</div>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+
+    <form id="modal-form">
+      <div class="modal-body">
+        <div class="form-row" id="f-type-row" style="display:none">
+          <label for="f-type">Device Type</label>
+          <select id="f-type">
+            <option value="ap">Access Point</option>
+            <option value="switch">Switch</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="f-name">Device ID</label>
+          <input id="f-name" type="text" placeholder="e.g. NORTHCAMP-CABIN5-AP1" required />
+        </div>
+        <div class="form-row">
+          <label for="f-ip">IP Address</label>
+          <input id="f-ip" type="text" placeholder="e.g. 10.0.1.55" required />
+        </div>
+        <div class="form-row">
+          <label for="f-hostname">DNS Hostname <span class="optional">(optional — pinged instead of the IP when set)</span></label>
+          <input id="f-hostname" type="text" placeholder="e.g. ap-north-hall-1.example.net" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label for="f-intermapper">Intermapper link</label>
+          <input id="f-intermapper" type="url" placeholder="e.g. https://intermapper.example.com/…/device.html" autocomplete="off" required />
+        </div>
+        <div class="form-row">
+          <label for="f-location">Name</label>
+          <input id="f-location" type="text" placeholder="e.g. North Camp Cabin 5" required />
+        </div>
+        <div class="form-row" id="f-switch-row">
+          <label for="f-switch">Parent Switch <span class="optional">(optional)</span></label>
+          <select id="f-switch">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div class="form-row" id="f-uplink-row" style="display:none">
+          <label for="f-uplink">Uplink Switch <span class="optional">(optional)</span></label>
+          <select id="f-uplink">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div id="modal-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="modal-delete" hidden>Delete</button>
+        <button type="button" class="btn" id="modal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="modal-submit">Add Device</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Location modal -->
+<div id="site-modal-overlay" class="modal-overlay" hidden>
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Location</div>
+      <button class="modal-close" id="site-modal-close">&times;</button>
+    </div>
+    <form id="site-modal-form">
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="site-name-input">Location Name</label>
+          <input id="site-name-input" type="text" placeholder="e.g. Detroit Office"
+                 autocomplete="off" required />
+        </div>
+        <div id="site-modal-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="site-modal-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="site-modal-submit">Add Location</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Location modal (rename / delete) -->
+<div id="site-edit-overlay" class="modal-overlay" hidden>
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Location</div>
+      <button class="modal-close" id="site-edit-close">&times;</button>
+    </div>
+    <form id="site-edit-form">
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="site-edit-name">Location Name</label>
+          <input id="site-edit-name" type="text" autocomplete="off" required />
+        </div>
+        <div class="form-row" id="site-delete-row" hidden>
+          <label for="site-delete-pw">Admin Password</label>
+          <input id="site-delete-pw" type="password" autocomplete="off"
+                 placeholder="Required to delete this location" />
+          <p class="site-delete-warn">
+            This schedules the location and <strong>all of its devices</strong> for deletion in
+            <strong>24 hours</strong>. A Slack alert is sent immediately, and anyone can undo it from
+            the location during that window.
+          </p>
+        </div>
+        <div id="site-edit-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="site-edit-delete">Delete</button>
+        <button type="button" class="btn" id="site-edit-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="site-edit-save" hidden>Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Activity Log modal (per-device and global). The site-wide "View logs" view
+     shows tabs: Device Logs / User Activity / Scheduled Pauses. Per-device/switch
+     logs (opened from a device) reuse the Device Logs pane with tabs hidden. -->
+<div id="log-overlay" class="modal-overlay" hidden>
+  <div class="modal log-modal">
+    <div class="modal-header">
+      <h3 class="log-title" id="log-title">Activity Log</h3>
+      {% if is_admin %}
+      <button class="btn btn-soft admin-only" id="log-edit" type="button" title="Edit log (delete monitoring pauses)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        <span id="log-edit-label">Edit</span>
+      </button>
+      {% endif %}
+      <button class="btn btn-soft" id="log-export" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export Excel
+      </button>
+      <button class="modal-close" id="log-close">&times;</button>
+    </div>
+
+    <div class="log-tabs" id="log-tabs" hidden>
+      <button class="modal-tab active" type="button" data-log-tab="device">Device Logs</button>
+      {% if not demo and is_admin %}<button class="modal-tab admin-only" type="button" data-log-tab="user">User Activity</button>{% endif %}
+      <button class="modal-tab" type="button" data-log-tab="events">Event Logs</button>
+    </div>
+
+    <!-- Pane: Device Logs (device up/down/paused history) -->
+    <div class="log-pane" id="log-pane-device">
+      <div class="log-filter-bar" id="log-filter-bar">
+        <button class="filter-dropdown-btn" id="log-filter-btn" type="button" aria-expanded="false">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filters<span class="filter-count-badge" id="log-filter-count" hidden></span>
+        </button>
+        <div class="filter-popover" id="log-filter-popover" hidden>
+          <div class="log-filters" id="log-filters">
+            <div class="filter-group" id="log-filter-cats">
+          <span class="filter-group-label">Device type</span>
+          <label><input type="checkbox" data-logfilter="cat" value="switch" checked /> Switches</label>
+          <label><input type="checkbox" data-logfilter="cat" value="ap" checked /> APs</label>
+          <label><input type="checkbox" data-logfilter="cat" value="other" checked /> Other</label>
+        </div>
+        <div class="filter-group" id="log-filter-events">
+          <span class="filter-group-label">Event</span>
+          <label><input type="checkbox" data-logfilter="event" value="down" checked /><span class="log-cat-dot down"></span> Downtime</label>
+          <label><input type="checkbox" data-logfilter="event" value="unknown" checked /><span class="log-cat-dot unknown"></span> Unknown</label>
+          <label><input type="checkbox" data-logfilter="event" value="paused" checked /><span class="log-cat-dot paused"></span> Paused</label>
+          <label><input type="checkbox" data-logfilter="event" value="tracked" checked /><span class="log-cat-dot tracked"></span> Tracking start</label>
+          <label><input type="checkbox" data-logfilter="event" value="deleted" checked /><span class="log-cat-dot deleted"></span> Deleted</label>
+          <label><input type="checkbox" data-logfilter="event" value="app_downtime" checked /><span class="log-cat-dot app_downtime"></span> Agent downtime</label>
+          <label><input type="checkbox" data-logfilter="member" value="event" checked /><span class="log-cat-dot event"></span> Event-related</label>
+        </div>
+        <div class="filter-group" id="log-filter-freq">
+          <span class="filter-group-label">Frequent Outages</span>
+          <label><input type="checkbox" data-logfilter="freq" value="frequent" checked /><span class="log-cat-dot frequent"></span> Frequent outage devices</label>
+          <label><input type="checkbox" data-logfilter="freq" value="other" checked /> All other devices</label>
+        </div>
+      </div>
+      <div class="log-filters" id="switch-log-filters" hidden>
+        <div class="filter-group">
+          <span class="filter-group-label">Show</span>
+          <label><input type="checkbox" id="slf-self" checked /> This switch</label>
+          <label><input type="checkbox" id="slf-children" /> Connected devices</label>
+        </div>
+      </div>
+        </div>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+
+    <!-- Pane: User Activity (per-location audit trail) -->
+    <div class="log-pane" id="log-pane-user" hidden>
+      <div class="log-filter-bar" id="ua-filter-bar">
+        <button class="filter-dropdown-btn" id="ua-filter-btn" type="button" aria-expanded="false">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filters<span class="filter-count-badge" id="ua-filter-count" hidden></span>
+        </button>
+        <div class="ua-filters filter-popover" id="ua-filters" hidden>
+          <label><input type="checkbox" data-ua-filter="added" checked /><span class="ua-dot added"></span> Added device</label>
+          <label><input type="checkbox" data-ua-filter="deleted" checked /><span class="ua-dot deleted"></span> Deleted device</label>
+          <label><input type="checkbox" data-ua-filter="changed_monitoring" checked /><span class="ua-dot changed_monitoring"></span> Changed monitoring</label>
+          <label><input type="checkbox" data-ua-filter="changed_maintenance" checked /><span class="ua-dot changed_maintenance"></span> Changed events</label>
+          <label><input type="checkbox" data-ua-filter="other" checked /><span class="ua-dot other"></span> Other</label>
+        </div>
+      </div>
+      <div class="log-body" id="ua-body"><div class="log-empty">Loading…</div></div>
+    </div>
+
+    <!-- Pane: Event Logs (per-location) — Present / Upcoming / Past -->
+    <div class="log-pane" id="log-pane-events" hidden>
+      <div class="log-body" id="ev-list-body"><div class="log-empty">Loading…</div></div>
+      {% if is_admin %}
+      <div class="sp-pane-footer admin-only" id="ev-footer">
+        <button type="button" class="btn btn-soft" id="ev-edit-mode-btn">Edit</button>
+        <div class="ev-edit-toolbar" id="ev-edit-toolbar" hidden>
+          <span class="ev-sel-count" id="ev-sel-count">0 selected</span>
+          <button type="button" class="btn" id="ev-combine-btn" disabled>Combine</button>
+          <button type="button" class="btn btn-danger" id="ev-delete-btn" disabled>Delete</button>
+          <button type="button" class="btn" id="ev-edit-done-btn">Done</button>
+        </div>
+        <button type="button" class="btn" id="sched-new-btn">Schedule event</button>
+        <button type="button" class="btn btn-primary" id="ev-new-btn">Mark an event</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Event detail (opens on top of the Event Logs list; closing returns to it) -->
+<div id="ev-detail-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="ev-detail-title">Event</h3>
+      <button class="modal-close" id="ev-detail-close">&times;</button>
+    </div>
+    <div class="modal-body" id="ev-detail-body"></div>
+  </div>
+</div>
+
+<!-- Decommission notice (location pending soft-delete) -->
+<div id="decom-overlay" class="modal-overlay" hidden>
+  <div class="modal confirm-modal">
+    <div class="modal-body">
+      <h3>This location has been decommissioned</h3>
+      <p>This location is scheduled for permanent deletion. Would you like to undo this?</p>
+      <div id="decom-error" class="modal-error" hidden></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="decom-dismiss">Not now</button>
+      <button type="button" class="btn btn-primary" id="decom-undo">Yes, undo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mark an Event: name(category) -> description -> date/time -> devices ->
+     (only if the window reaches the future) what to pause. Opens over Event Logs. -->
+<div id="ev-form-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="ev-form-title">Mark an event</div>
+      <button class="modal-close" id="ev-form-close">&times;</button>
+    </div>
+    <form id="ev-form">
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="ev-category">Event</label>
+          <select id="ev-category" required>
+            <option value="maintenance">Maintenance</option>
+            <option value="lightning">Lightning</option>
+            <option value="power_outage">Power outage</option>
+            <option value="scheduled_downtime">Scheduled downtime</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="ev-description">Title <span class="optional">(optional — defaults to the category)</span></label>
+          <input id="ev-description" type="text" maxlength="500"
+                 placeholder="e.g. Storm near North Camp; router firmware upgrade" autocomplete="off" />
+        </div>
+
+        <!-- Past-tense by default; tick to mark it ongoing and pick still-affected devices. -->
+        <label class="ev-check-row"><input type="checkbox" id="ev-ongoing"> Is this event ongoing?</label>
+        <div class="form-row ev-create-only" id="ev-affected-row" hidden>
+          <label>Which devices are still affected by this event? <span class="optional">(these will need to be resolved later)</span></label>
+          <div id="ev-affected-list" class="sp-device-list"></div>
+        </div>
+        <div class="form-row ev-create-only" id="ev-pause-row" hidden>
+          <label>What to pause <span class="optional">(applies to the still-affected devices)</span></label>
+          <div class="pause-mode">
+            <label><input type="radio" name="ev-pause" value="none" checked>
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Continue monitoring as usual</span>
+                <span class="pause-mode-desc">Keep pinging and alerting; just record the event.</span>
+              </span></label>
+            <label><input type="radio" name="ev-pause" value="notifications">
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Pause Slack notifications</span>
+                <span class="pause-mode-desc">Stop Slack alerts for these devices, with no change to this website.</span>
+              </span></label>
+            <label><input type="radio" name="ev-pause" value="monitoring">
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Pause monitoring entirely</span>
+                <span class="pause-mode-desc">Status changes will be untracked. They will appear as 'paused' on this website.</span>
+              </span></label>
+          </div>
+        </div>
+
+        <!-- Optional start/end, each behind a checkbox. -->
+        <label class="ev-check-row"><input type="checkbox" id="ev-add-start"> Add a start date/time?</label>
+        <div class="sp-datetime" id="ev-start-row" hidden>
+          <div class="form-row"><label for="ev-start-date">Start date</label><input id="ev-start-date" type="date" /></div>
+          <div class="form-row"><label for="ev-start-time">Start time</label><input id="ev-start-time" type="time" /></div>
+        </div>
+        <label class="ev-check-row ev-create-only" id="ev-add-end-row"><input type="checkbox" id="ev-add-end"> Add an end date/time?</label>
+        <div class="sp-datetime" id="ev-end-row" hidden>
+          <div class="form-row"><label for="ev-end-date">End date</label><input id="ev-end-date" type="date" /></div>
+          <div class="form-row"><label for="ev-end-time">End time</label><input id="ev-end-time" type="time" /></div>
+        </div>
+
+        <!-- The only way to add devices to a past event: pick their specific log items. -->
+        <div class="form-row ev-create-only" id="ev-logpick-row">
+          <label>Add outages from the activity log <span class="optional">(only the log items you tick are added — the device itself isn't)</span></label>
+          <div id="ev-device-list" class="sp-device-list"></div>
+        </div>
+
+        <div id="ev-form-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="ev-form-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="ev-form-submit">Save event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule a FUTURE event (all future-events / pause infrastructure lives here) -->
+<div id="sched-form-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Schedule an event</div>
+      <button class="modal-close" id="sched-form-close">&times;</button>
+    </div>
+    <form id="sched-form">
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="sched-category">Event</label>
+          <select id="sched-category" required>
+            <option value="maintenance">Maintenance</option>
+            <option value="lightning">Lightning</option>
+            <option value="power_outage">Power outage</option>
+            <option value="scheduled_downtime">Scheduled downtime</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="sched-description">Title <span class="optional">(optional — defaults to the category)</span></label>
+          <input id="sched-description" type="text" maxlength="500"
+                 placeholder="e.g. Planned firmware upgrade at North Camp" autocomplete="off" />
+        </div>
+        <div class="sp-datetime">
+          <div class="form-row"><label for="sched-start-date">Start date</label><input id="sched-start-date" type="date" required /></div>
+          <div class="form-row"><label for="sched-start-time">Start time</label><input id="sched-start-time" type="time" required /></div>
+        </div>
+        <div class="sp-datetime">
+          <div class="form-row"><label for="sched-end-date">End date <span class="optional">(optional)</span></label><input id="sched-end-date" type="date" /></div>
+          <div class="form-row"><label for="sched-end-time">End time</label><input id="sched-end-time" type="time" /></div>
+        </div>
+        <!-- Monitoring choice ABOVE device selection. -->
+        <div class="form-row">
+          <label>What to pause <span class="optional">(a pause needs ≥8h lead)</span></label>
+          <div class="pause-mode">
+            <label><input type="radio" name="sched-pause" value="none" checked>
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Continue monitoring as usual</span>
+                <span class="pause-mode-desc">Keep pinging and alerting; just record the event.</span>
+              </span></label>
+            <label><input type="radio" name="sched-pause" value="notifications">
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Pause Slack notifications</span>
+                <span class="pause-mode-desc">Stop Slack alerts for these devices, with no change to this website.</span>
+              </span></label>
+            <label><input type="radio" name="sched-pause" value="monitoring">
+              <span class="pause-mode-text">
+                <span class="pause-mode-title">Pause monitoring entirely</span>
+                <span class="pause-mode-desc">Status changes will be untracked. They will appear as 'paused' on this website.</span>
+              </span></label>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Devices <span class="optional">(check a switch to include all its APs)</span></label>
+          <div id="sched-device-list" class="sp-device-list"></div>
+        </div>
+        <div id="sched-form-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="sched-form-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Schedule event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Deleted (decommissioned) devices (hamburger menu → Deleted devices). Read-only
+     list; click a device to open its detail panel (history/logs retained). -->
+<div id="deleted-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Deleted Devices</div>
+      <button class="modal-close" id="deleted-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="deleted-list" class="deleted-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- App settings (hamburger menu → Settings). DB-backed tuning knobs; apply live. -->
+<div id="settings-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Settings</div>
+      <button class="modal-close" id="settings-close">&times;</button>
+    </div>
+    <form id="settings-form">
+      <div class="modal-body">
+        <div class="settings-note">
+          These apply to <strong>every location</strong> and take effect immediately.
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Frequent-outage detection</div>
+          <div class="form-row">
+            <label for="set-outage_window_days">Look-back window (days)</label>
+            <input id="set-outage_window_days" type="number" min="1" max="365" step="1" required />
+            <div class="settings-hint">How far back outages are counted when flagging frequently-failing devices.</div>
+          </div>
+          <div class="form-row">
+            <label for="set-frequent_min_outages">Minimum outages to flag</label>
+            <input id="set-frequent_min_outages" type="number" min="1" max="1000" step="1" required />
+            <div class="settings-hint">A device is only flagged "frequent" once it hits at least this many outages in the window.</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Ping &amp; down detection</div>
+          <div class="form-row">
+            <label for="set-down_confirm_checks">Down-confirm checks</label>
+            <input id="set-down_confirm_checks" type="number" min="1" max="10" step="1" required />
+            <div class="settings-hint">Consecutive failed checks before a device is marked down (recovery is always immediate).</div>
+          </div>
+          <div class="form-row">
+            <label for="set-ping_count">Pings per check</label>
+            <input id="set-ping_count" type="number" min="1" max="10" step="1" required />
+            <div class="settings-hint">How many echo requests the agent sends each device per check.</div>
+          </div>
+          <div class="form-row">
+            <label for="set-ping_timeout">Ping timeout (seconds)</label>
+            <input id="set-ping_timeout" type="number" min="1" max="30" step="1" required />
+            <div class="settings-hint">How long the agent waits for a reply before treating a ping as failed.</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Alerts</div>
+          <div class="form-row">
+            <label for="set-watchdog_stale_minutes">Agent-silence threshold (minutes)</label>
+            <input id="set-watchdog_stale_minutes" type="number" min="1" max="1440" step="1" required />
+            <div class="settings-hint">Slack alerts if an agent stops reporting for longer than this.</div>
+          </div>
+          <div class="form-row">
+            <label for="set-reminder_hours">Prolonged-outage reminder (hours)</label>
+            <input id="set-reminder_hours" type="number" min="0" max="168" step="1" required />
+            <div class="settings-hint">Re-alert on a device that stays down this long. Set 0 to disable reminders.</div>
+          </div>
+          <div class="form-row settings-toggle-row">
+            <label for="set-alert_on_recovery">Send "all clear" recovery alerts</label>
+            <input id="set-alert_on_recovery" type="checkbox" />
+            <div class="settings-hint">Post a Slack message when devices come back up, not just when they go down.</div>
+          </div>
+        </div>
+
+        <div id="settings-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="settings-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="settings-save">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Mark/edit an outage stretch as an event (the retrospective per-outage path) -->
+<div id="maint-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="maint-title">Mark as event</div>
+      <button class="modal-close" id="maint-close">&times;</button>
+    </div>
+    <form id="maint-form">
+      <div class="modal-body">
+        <div class="form-row maint-existing-only" id="maint-existing-row" hidden>
+          <label for="maint-existing-select">Add to which event?</label>
+          <select id="maint-existing-select"></select>
+        </div>
+        <p class="maint-hint maint-create-only">Adjust the times below to widen or narrow the event window.</p>
+        <div class="form-row maint-create-only">
+          <label for="maint-category">Event</label>
+          <select id="maint-category">
+            <option value="maintenance">Maintenance</option>
+            <option value="lightning">Lightning</option>
+            <option value="power_outage">Power outage</option>
+            <option value="scheduled_downtime">Scheduled downtime</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-row maint-create-only">
+          <label for="maint-description">Title <span class="optional">(optional — defaults to the category)</span></label>
+          <input id="maint-description" type="text" maxlength="500" autocomplete="off" />
+        </div>
+        <div class="sp-datetime maint-create-only">
+          <div class="form-row">
+            <label for="maint-start-date">Start date</label>
+            <input id="maint-start-date" type="date" />
+          </div>
+          <div class="form-row">
+            <label for="maint-start-time">Start time</label>
+            <input id="maint-start-time" type="time" />
+          </div>
+        </div>
+        <div class="sp-datetime maint-create-only">
+          <div class="form-row">
+            <label for="maint-end-date">End date</label>
+            <input id="maint-end-date" type="date" />
+          </div>
+          <div class="form-row">
+            <label for="maint-end-time">End time</label>
+            <input id="maint-end-time" type="time" />
+          </div>
+        </div>
+        <label class="ev-inline-toggle"><input type="checkbox" id="maint-add-devices"> Also apply this to other devices</label>
+        <div id="maint-device-list" class="sp-device-list" hidden></div>
+        <div id="maint-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-soft" id="maint-existing-toggle">Add to existing event</button>
+        <span class="modal-footer-spacer"></span>
+        <button type="button" class="btn" id="maint-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="maint-submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm Dialog (used by Delete) -->
+<div id="confirm-overlay" class="modal-overlay" hidden>
+  <div class="modal confirm-modal">
+    <div class="modal-body">
+      <h3 id="confirm-title">Are you sure?</h3>
+      <p id="confirm-message"></p>
+      <div id="confirm-error" class="modal-error" hidden></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-accept">Confirm</button>
+      <button type="button" class="btn btn-primary" id="confirm-extra" hidden></button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin-password prompt to unlock log editing (delete monitoring pauses). -->
+<div id="log-edit-overlay" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit log</div>
+      <button class="modal-close" id="log-edit-close">&times;</button>
+    </div>
+    <form id="log-edit-form">
+      <div class="modal-body">
+        <p class="muted-note">Enter the admin password to delete monitoring-pause log entries.</p>
+        <div class="form-row">
+          <label for="log-edit-pw">Admin Password</label>
+          <input id="log-edit-pw" type="password" autocomplete="off" />
+        </div>
+        <div id="log-edit-error" class="modal-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="log-edit-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Unlock</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Demo disclaimer (DEMO_DATA build). Shown once per page load; wired in map.js. -->
+{% if demo_data %}
+<div id="demo-overlay" class="modal-overlay" hidden>
+  <div class="modal demo-modal">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Demo version</div>
+    </div>
+    <div class="modal-body">
+      <p>This is a <strong>demonstration build</strong>. Every device, location, status,
+         event, and log entry shown here is <strong>fake sample data</strong> — there is no
+         real network being monitored, no database of record, and no login.</p>
+      <p class="demo-modal-sub">It exists only to showcase the app's features. Nothing you
+         do here affects any real system.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" id="demo-ack">Got it — explore the demo</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+  window.DEMO = {{ 'true' if demo else 'false' }};
+  window.DEMO_DATA = {{ 'true' if demo_data else 'false' }};
+  window.IS_ADMIN = {{ 'true' if is_admin else 'false' }};
+</script>
+<script src="/static/js/d3.min.js"></script>
+<script src="/static/js/map.js"></script>
+</body>
+</html>

@@ -1,0 +1,1822 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* The HTML `hidden` attribute is authoritative everywhere — base classes that
+   set `display` must not override it. This replaces the per-class `[hidden]`
+   patches that used to be needed. */
+[hidden] { display: none !important; }
+
+:root {
+  /* Neutral greys/blacks are tinted toward Michigan Blue (hue ~212°) at their
+     original lightness, so the whole UI reads as shades of U-M blue while keeping
+     the same contrast ladder. Status colors (up/down/warn/paused) stay as-is. */
+  --bg: #051321;
+  --surface: #0c2034;
+  --surface2: #152c47;
+  --border: #203957;
+  --text: #e1e9ef;
+  --text-muted: #90a9c3;
+  --up: #22c55e;
+  --down: #ef4444;
+  --unknown: #6b7280;
+  --warn: #eab308;
+  --paused: #a855f7;
+  --accent: #3b82f6;
+  --header-h: 64px;
+  --sidebar-w: 300px;
+  /* Brand palette. */
+  --um-blue: #00274c;    /* Michigan Blue */
+  --um-maize: #ffcb05;   /* Michigan Maize */
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────── */
+/* U-M Alumni Association branding: Michigan Blue bar with a Maize bottom rule. */
+header {
+  height: var(--header-h);
+  background: var(--um-blue);
+  border-bottom: 3px solid var(--um-maize);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* The Alumni Association logo (drop the artwork at static/img/logo.png; the <img>
+   removes itself if the file isn't present yet). Sized by height so a wide wordmark
+   stays legible; width follows, capped so it can't crowd out the rest of the bar. */
+.brand-logo {
+  height: 32px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  margin: 2px 6px 2px 2px;   /* a little breathing room around the mark */
+}
+.brand-name { white-space: nowrap; }
+
+header h1 svg { opacity: 0.7; }
+
+.header-stats {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+  align-items: center;
+}
+
+/* ── Status dropdown (collapsed summary → breakdown) ── */
+.stat-dropdown { position: relative; }
+
+.stat-summary { gap: 8px; }
+.stat-summary .chevron { opacity: 0.7; transition: transform 0.15s; }
+.stat-summary[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.up-dot   { background: var(--up); }
+.dot.down-dot { background: var(--down); }
+.dot.unk-dot  { background: var(--unknown); }
+
+.stat-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 170px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+}
+.stat-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 5px;
+}
+.stat-menu-row { cursor: pointer; }
+.stat-menu-row:hover { background: var(--surface); }
+.stat-menu-row.active { background: var(--surface); outline: 1px solid var(--border); }
+.stat-menu-label { flex: 1; color: var(--text-muted); }
+.stat-menu-row span:last-child { font-weight: 600; }
+.stat-menu-hint {
+  margin-top: 4px;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--accent); border-color: var(--accent); }
+.btn:active { opacity: 0.8; }
+.btn.active { background: var(--accent); border-color: var(--accent); }
+.btn svg { flex-shrink: 0; }
+a.btn { text-decoration: none; }
+
+/* Header buttons sit on the dark Michigan-Blue bar — a lighter, near-white border
+   makes them read as crisp raised controls. (Hover still turns the border accent.) */
+header .btn:not(:hover):not(.active) { border-color: rgba(255, 255, 255, 0.35); }
+
+/* ── Location (site) dropdown ──────────────────────── */
+/* Reuses the status-dropdown look (.stat-dropdown/.stat-summary/.stat-menu).
+   The status dot lives inside the button; each row is a selectable location. */
+.site-summary { font-weight: 600; }
+.site-menu-name { flex: 1; }
+.site-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: -2px -4px -2px 4px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.site-edit-btn:hover { background: var(--surface); color: var(--text); }
+.site-delete-warn { margin: 6px 0 0; font-size: 12px; color: var(--text-muted); }
+.site-delete-warn strong { color: var(--down); }
+.site-menu-add {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 5px 5px;
+  color: var(--accent);
+}
+.site-menu-add:hover { background: var(--surface); }
+.site-menu-add svg { flex-shrink: 0; }
+
+.loc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--unknown); }
+.loc-dot.up   { background: var(--up); box-shadow: 0 0 6px var(--up); }
+.loc-dot.down { background: var(--down); box-shadow: 0 0 6px var(--down); }
+.loc-dot.off  { background: var(--unknown); }
+
+/* ── Hamburger menu ───────────────────────────────── */
+.menu { position: relative; }
+.menu-toggle { padding: 6px 9px; }
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.menu-item:hover { background: var(--surface); }
+/* Mobile-only menu duplicates of header buttons — revealed inside the ≤768px query. */
+.menu-item.mobile-only { display: none; }
+
+/* ── Map controls (bottom-left, over the map) ─────── */
+.map-controls {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.map-ctl-btn { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+/* .btn sets display, which would override the `hidden` attribute — see the other
+   precedents in this file. */
+.map-ctl-btn[hidden] { display: none; }
+/* The mobile collapse toggle only exists on mobile (revealed in the ≤768px query). */
+#map-ctl-toggle { display: none; }
+
+/* "Set map area" mode: instructions + reset, top-center over the map. */
+#map-area-hint {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+#map-area-hint[hidden] { display: none; }
+#map-area-hint .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* Aerial imagery credit — required by the imagery licence, so it stays visible
+   (unobtrusively) whenever the photo is shown. */
+#map-attrib {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  z-index: 20;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(15, 17, 23, 0.6);
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+#map-attrib[hidden] { display: none; }
+
+/* ── Layout ─────────────────────────────────────── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Map ─────────────────────────────────────────── */
+#map-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#map-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#map-svg:active { cursor: grabbing; }
+/* Setting the map area is a rectangle drag, not a pan. */
+/* While dragging a map-area / auto-crop rectangle, stop the browser from panning
+   the page on touch so the rectangle can be drawn on mobile. */
+#map-svg.setting-area { cursor: crosshair; touch-action: none; }
+#map-svg.setting-area:active { cursor: crosshair; }
+
+.grid-line { stroke: var(--border); stroke-width: 1; }
+
+/* ── Aerial basemap ──────────────────────────────── */
+/* Tiles are decorative backdrop: they must never intercept a click meant for a
+   node, a pan, or the map-area rubber band. */
+.basemap-tiles, .basemap-scrim { pointer-events: none; }
+/* Dark wash over the photo. Without it the green/red status colours get lost
+   against sunlit grass, pale roofs and open water. Applied as one rect rather than
+   an SVG filter on ~200 <image> elements, which would be far more expensive. */
+.basemap-scrim { fill: rgba(15, 17, 23, 0.45); }
+
+/* Rubber band while dragging out a new map area. */
+.area-select {
+  fill: rgba(59, 130, 246, 0.15);
+  stroke: #3b82f6;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Over the photo, node icons are counter-scaled by 1/k to hold a constant on-screen
+   size — so link strokes must be too, or they'd end up hairline when zoomed in and
+   slabs when zoomed out. non-scaling-stroke puts width AND dash pattern in screen
+   space, which is what we want in both modes. */
+.ap-link, .sw-link { vector-effect: non-scaling-stroke; }
+
+/* ── Switch nodes ────────────────────────────────── */
+.switch-node { cursor: pointer; }
+#map-svg.editing .switch-node { cursor: move; }
+
+.switch-node rect {
+  stroke-width: 2;
+  transition: filter 0.2s;
+}
+.switch-node text {
+  font-size: 13px;
+  fill: var(--text);
+  pointer-events: none;
+  font-family: inherit;
+}
+.switch-node text.sw-ip { font-size: 9px; fill: var(--text-muted); }
+/* Over the aerial photo the switch box shrinks to AP scale, so match the AP label
+   size there; the plain grid keeps the larger 13px. */
+#map-svg.photo-on .switch-node text { font-size: 9px; }
+
+.switch-node.status-up    rect { fill: #14422a; stroke: var(--up); }
+.switch-node.status-down  rect { fill: #4c1515; stroke: var(--down); }
+.switch-node.status-unknown rect { fill: #1f2937; stroke: var(--unknown); }
+
+.switch-node.selected rect { stroke-width: 3; filter: drop-shadow(0 0 8px currentColor); }
+.switch-node.dimmed   { opacity: 0.25; }
+
+/* Offline (down) devices flash red so an outage is impossible to miss, even over the
+   dimmed aerial photo. Applied at the node-group level so it covers switch boxes, AP
+   circles and 'other' diamonds alike; the AP ring keeps its own opacity pulse. */
+.switch-node.status-down,
+.node.status-down,
+.other-node.status-down { animation: down-flash 1s ease-in-out infinite; }
+
+@keyframes down-flash {
+  0%, 100% { filter: drop-shadow(0 0 1px #ef4444); }
+  50%      { filter: drop-shadow(0 0 10px #ef4444) drop-shadow(0 0 5px #ff4d4d) brightness(1.4); }
+}
+
+/* ── AP nodes ────────────────────────────────────── */
+.node { cursor: pointer; }
+#map-svg.editing .node { cursor: move; }
+.node circle.bg  { stroke-width: 1.5; }
+.node circle.ring { fill: none; stroke-width: 2; opacity: 0.3; }
+.node text.ap-label {
+  font-size: 9px;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  pointer-events: none;
+  font-family: inherit;
+}
+
+.node.status-up      circle.bg { fill: #16532d; stroke: var(--up); }
+.node.status-down    circle.bg { fill: #4c1515; stroke: var(--down); }
+.node.status-unknown circle.bg { fill: #1f2937; stroke: var(--unknown); }
+
+.node.status-up    circle.ring { stroke: var(--up); }
+.node.status-down  circle.ring { stroke: var(--down); animation: ap-pulse 1.5s ease-in-out infinite; }
+.node.selected circle.bg { stroke-width: 3; }
+.node.dimmed { opacity: 0.2; }
+
+@keyframes ap-pulse {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.8; }
+}
+
+/* ── Frequent-outage devices (amber) ─────────────── */
+/* Amber for up/unknown; a current 'down' still shows red (more specific). */
+.node.frequent circle.bg   { fill: #3a2c08; stroke: var(--warn); }
+.node.frequent circle.ring { stroke: var(--warn); }
+.node.frequent.status-down circle.bg   { fill: #4c1515; stroke: var(--down); }
+.node.frequent.status-down circle.ring { stroke: var(--down); }
+
+.switch-node.frequent rect { fill: #3a2c08; stroke: var(--warn); }
+.switch-node.frequent.status-down rect { fill: #4c1515; stroke: var(--down); }
+
+/* ── Other devices (diamonds) ────────────────────── */
+.other-node { cursor: pointer; }
+#map-svg.editing .other-node { cursor: move; }
+.other-node rect.bg { stroke-width: 1.5; }
+.other-node text.ap-label {
+  font-size: 9px;
+  fill: var(--text-muted);
+  text-anchor: middle;
+  pointer-events: none;
+  font-family: inherit;
+}
+.other-node.status-up      rect.bg { fill: #16532d; stroke: var(--up); }
+.other-node.status-down    rect.bg { fill: #4c1515; stroke: var(--down); }
+.other-node.status-unknown rect.bg { fill: #1f2937; stroke: var(--unknown); }
+.other-node.selected rect.bg { stroke-width: 3; }
+.other-node.dimmed { opacity: 0.2; }
+.other-node.frequent rect.bg { fill: #3a2c08; stroke: var(--warn); }
+.other-node.frequent.status-down rect.bg { fill: #4c1515; stroke: var(--down); }
+
+/* Over the photo the always-on node text labels are hidden (a hover tooltip shows the
+   status instead); they stay visible while editing so devices can be told apart, and
+   a "Show labels" toggle (adds .labels-on) can force them on. */
+#map-svg.photo-on:not(.editing):not(.labels-on) .sw-label,
+#map-svg.photo-on:not(.editing):not(.labels-on) .sw-ip,
+#map-svg.photo-on:not(.editing):not(.labels-on) .node text.ap-label,
+#map-svg.photo-on:not(.editing):not(.labels-on) .other-node text.ap-label { display: none; }
+
+/* Marquee multi-select (Edit Map → Select). */
+#map-svg.selecting { cursor: crosshair; }
+.marquee-rect {
+  fill: rgba(255, 203, 5, 0.12);
+  stroke: var(--um-maize);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.switch-node.group-selected rect,
+.node.group-selected circle.bg,
+.other-node.group-selected rect.bg { stroke: var(--um-maize); stroke-width: 3; }
+.switch-node.group-selected,
+.node.group-selected,
+.other-node.group-selected { filter: drop-shadow(0 0 4px var(--um-maize)); }
+
+/* ── Paused / disabled devices ───────────────────── */
+/* Muted slate with a dashed outline; no status color, no pulse. */
+.node.status-disabled circle.bg     { fill: #2b1f43; stroke: var(--paused); stroke-dasharray: 3 2; }
+.node.status-disabled circle.ring   { stroke: transparent; }
+.switch-node.status-disabled rect   { fill: #2b1f43; stroke: var(--paused); stroke-dasharray: 4 3; animation: none; }
+.other-node.status-disabled rect.bg { fill: #2b1f43; stroke: var(--paused); stroke-dasharray: 3 2; }
+
+.device-status-dot.disabled { background: var(--paused); box-shadow: none; }
+/* Purple corner dot on a node = Slack notifications paused (still monitored). */
+.notif-dot { fill: var(--paused); stroke: var(--bg); stroke-width: 1.5; pointer-events: none; }
+.dot.paused-dot { background: var(--paused); }
+.badge-paused { background: var(--paused); color: #fff; }
+.device-item.paused { opacity: 0.6; }
+
+.detail-monitor { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.detail-monitor .btn { width: 100%; justify-content: center; }
+
+.ap-link.dimmed { opacity: 0.06; }
+
+/* Switch → parent-switch (uplink) backbone links */
+.sw-link { stroke-linecap: round; }
+.sw-link.dimmed { opacity: 0.12; }
+
+/* ── Tooltip ─────────────────────────────────────── */
+#tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+#tooltip.visible { opacity: 1; }
+#tooltip .tip-name { font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+#tooltip .tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+  color: var(--text-muted);
+}
+#tooltip .tip-row span:last-child { color: var(--text); }
+
+/* ── Sidebar ─────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Drag handle between the map and the device list. A thin hit-area with a hairline
+   that highlights on hover/drag. */
+#sidebar-resizer {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 15;
+  background: transparent;
+}
+#sidebar-resizer::before {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+#sidebar-resizer:hover::before,
+body.resizing-sidebar #sidebar-resizer::before { opacity: 1; }
+body.resizing-sidebar { cursor: col-resize; user-select: none; }
+
+.sidebar-header {
+  padding: 10px 12px 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sidebar-add {
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.sidebar-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.1s;
+}
+.sidebar-search input::placeholder { color: var(--text-muted); }
+.sidebar-search input:focus { border-color: var(--accent); }
+.search-count { margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+
+/* ── Sidebar filters ─────────────────────────────── */
+.sidebar-filters {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.filter-toggle:hover { color: var(--text); }
+.filter-panel { padding: 4px 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.filter-group { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.filter-group-label {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.filter-group label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.filter-group input { accent-color: var(--accent); cursor: pointer; }
+
+#device-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.device-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.device-item:hover { background: var(--surface2); }
+.device-item.selected { background: var(--surface2); border-left: 3px solid var(--accent); }
+
+.device-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.device-status-dot.up      { background: var(--up); box-shadow: 0 0 6px var(--up); }
+.device-status-dot.down    { background: var(--down); box-shadow: 0 0 6px var(--down); }
+.device-status-dot.unknown { background: var(--unknown); }
+
+.device-info { flex: 1; min-width: 0; }
+.device-info .name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.device-info .ip {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* Collapsible "switch & connected devices" group in the sidebar sections. */
+.group-caret {
+  flex-shrink: 0;
+  width: 14px;
+  padding: 0;
+  margin: 0 -4px 0 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+.group-caret:hover { color: var(--text); }
+.device-item.group-head .name { font-weight: 600; }
+.group-suffix { color: var(--text-muted); font-weight: 400; font-size: 11px; }
+/* Connected-device rows nested under a switch head: indented, with a nesting line. */
+.device-item.group-child { padding-left: 34px; position: relative; }
+.device-item.group-child::before {
+  content: '';
+  position: absolute;
+  left: 21px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+
+/* ── Detail panel ────────────────────────────────── */
+#detail-panel {
+  position: fixed;            /* top/left/width/height set in JS to match the list */
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: none;
+  z-index: 60;               /* over the map, under modals */
+  box-shadow: -6px 0 16px rgba(0, 0, 0, 0.35);
+}
+#detail-panel.visible { display: block; }
+#detail-panel h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.detail-head h3 { margin-bottom: 0; }
+.detail-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.detail-close:hover { background: var(--surface); color: var(--text); }
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;   /* top-align so a wrapped value lines up with its label */
+  gap: 16px;                 /* keep the value off the label when it wraps */
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--text-muted);
+}
+.detail-row > span:first-child { flex-shrink: 0; }   /* label keeps its width */
+.detail-row span:last-child {
+  color: var(--text);
+  text-align: right;
+  min-width: 0;              /* allow the value to shrink + wrap instead of overflowing */
+  overflow-wrap: anywhere;   /* break a long DNS name to fit the value column */
+}
+.detail-row a { color: var(--accent); text-decoration: none; }
+.detail-row a:hover { text-decoration: underline; }
+
+/* ── History sparkline ───────────────────────────── */
+.sparkline {
+  display: flex;
+  gap: 2px;
+  margin-top: 10px;
+  align-items: flex-end;
+  height: 30px;
+}
+.spark-bar {
+  flex: 1;
+  border-radius: 2px;
+  min-width: 3px;
+}
+.spark-bar.up      { background: var(--up); }
+.spark-bar.down    { background: var(--down); }
+.spark-bar.unknown { background: var(--border); }
+
+/* ── Notes block (detail panel) ─────────────────── */
+.notes-block {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.notes-block label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.notes-block textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 7px 10px;
+  transition: border-color 0.15s;
+}
+.notes-block textarea:focus { outline: none; border-color: var(--accent); }
+.notes-block textarea::placeholder { color: var(--text-muted); }
+.notes-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.note-status {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Sidebar section labels ──────────────────────── */
+.sidebar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: pointer;
+  user-select: none;
+}
+.sidebar-section-label:hover { color: var(--text); }
+.sidebar-section-label .sec-caret {
+  font-size: 9px; line-height: 1; width: 9px; color: var(--text-muted);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: white;
+  margin-right: 4px;
+  vertical-align: middle;
+  font-weight: 700;
+}
+.badge-warn { background: var(--warn); color: var(--um-blue); }
+/* Notifications-paused chip: emoji only, no coloured pill. */
+.badge-notif { background: transparent; padding: 0; font-size: 11px; }
+
+/* ── AP child list in detail panel ──────────────── */
+.ap-child-list {
+  margin-top: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.ap-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 3px 0;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.ap-child:hover { color: var(--text); }
+.ap-child-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-child-meta { color: var(--text-muted); font-size: 10.5px; flex: 0 0 auto; }
+.ap-child-action {
+  flex: 0 0 auto; font-size: 10.5px; padding: 1px 7px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer;
+}
+.ap-child-action:hover { color: var(--text); border-color: var(--text-muted); }
+.ev-resolve-form { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.ev-resolve-form input { font-size: 10.5px; padding: 1px 4px; width: auto;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); }
+.ev-detail-hint { font-size: 11px; color: var(--text-muted); margin: 6px 0; font-style: italic; }
+
+/* ── Modal ───────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  /* Never taller than the viewport. The modal is a flex column so the header and
+     footer stay pinned while the body scrolls — this is the PERMANENT fix for
+     "new popup is too tall for the window", so per-modal max-height overrides
+     shouldn't be needed. A modal that wraps its body/footer in a <form> gets the
+     column passed through via the `.modal > form` rule below. */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+}
+
+/* Pass the flex column through a wrapping <form> so `.modal-body` can still be the
+   scroll container and the footer stays at the bottom. */
+.modal > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;   /* stay pinned; only the body scrolls */
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.modal-title { flex: 1; font-size: 14px; font-weight: 600; }
+
+.ua-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ua-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ua-filters input { accent-color: var(--accent); cursor: pointer; }
+
+.modal-tab {
+  padding: 5px 14px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.modal-tab:hover { background: var(--surface2); color: var(--text); }
+.modal-tab.active {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.modal-close:hover { background: var(--surface2); color: var(--text); }
+
+/* The scroll region: takes the leftover height and scrolls when content overflows,
+   keeping the whole modal within `max-height` (see `.modal`). */
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.form-row { display: flex; flex-direction: column; gap: 5px; }
+
+/* "Also pause connected devices" checkbox in the pause confirm dialog */
+.confirm-check {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; font-size: 13px; cursor: pointer; color: var(--text);
+}
+.confirm-check input { width: auto; flex: 0 0 auto; accent-color: var(--accent); }
+
+/* Monitoring-stale banner (agent gone quiet) */
+#stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--um-blue);
+  background: var(--warn);
+  border-bottom: 1px solid #b8880a;
+}
+#stale-banner svg { flex-shrink: 0; }
+
+/* Scheduled pauses */
+.sp-datetime { display: flex; gap: 12px; }
+.sp-datetime .form-row { flex: 1; }
+/* Inline checkbox rows in the Mark-an-event form (ongoing? / add start? / add end?). */
+.ev-check-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  cursor: pointer; margin: 4px 0;
+}
+.ev-check-row input[type="checkbox"] { width: auto; flex: 0 0 auto; margin: 0; accent-color: var(--accent); }
+.sp-device-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+}
+
+/* The schedule-pause form is tall (name + mode + 4 date/time fields + device
+   list) — cap the modal to the viewport and scroll its body so it never runs off
+   the screen. Header/footer stay fixed. */
+#sp-form-overlay .modal {
+  max-height: min(720px, calc(100vh - 40px));
+  display: flex;
+  flex-direction: column;
+}
+#sp-form-overlay #sp-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+#sp-form-overlay .modal-body { overflow-y: auto; min-height: 0; }
+.sp-dev-group { margin-bottom: 8px; }
+.sp-dev-sw, .sp-dev-child {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; padding: 3px 0; cursor: pointer;
+}
+.sp-dev-child { padding-left: 20px; color: var(--text-muted); }
+/* Override the .form-row input rule (width:100% + box styling) — these are
+   inline checkboxes, not text fields. */
+.sp-device-list input[type="checkbox"] {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+.sp-dev-sw strong { font-weight: 600; color: var(--text); }
+
+/* Device picker: "Device list" (with search) vs "Activity log" toggle. */
+.sp-device-list { max-height: 240px; }
+.dp-toolbar {
+  position: sticky;
+  top: -8px;                     /* cancel the container's 8px top padding */
+  margin: -8px -10px 6px;        /* full-bleed over the container padding */
+  padding: 8px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  z-index: 1;
+}
+.dp-tabs { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.dp-tab {
+  font-size: 12px; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); cursor: pointer; white-space: nowrap;
+}
+.dp-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.dp-search {
+  flex: 1 1 auto; min-width: 0; width: auto;
+  font-size: 12px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 5px;
+  background: var(--surface); color: var(--text);
+}
+.dp-search:focus { outline: none; border-color: var(--accent); }
+/* Activity-log view of the picker: chronological rows, each a selectable device. */
+.dp-log-entry {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 4px 2px; font-size: 12px; cursor: pointer;
+}
+.dp-log-entry .log-text { color: var(--text-muted); }
+.dp-log-entry input[type="checkbox"] { margin-top: 2px; }
+.dp-log-noselect { cursor: default; padding-left: 21px; }   /* align under the checkbox column */
+.sp-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.sp-item:last-child { border-bottom: none; }
+.sp-item-main { flex: 1 1 auto; min-width: 0; }
+.sp-item-name { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sp-item-when { font-size: 12.5px; color: var(--text); margin-top: 2px; }
+.sp-item-devs { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.sp-item-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; font-style: italic; }
+.sp-item-cat { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.sp-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Event Logs sections (Happening now / Upcoming / Past) */
+.ev-section + .ev-section { margin-top: 14px; }
+.ev-section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.sp-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: 10px; background: var(--surface2); color: var(--text-muted);
+}
+.sp-badge.active { background: var(--paused); color: #fff; }
+.sp-badge.sp-mode-notif { background: var(--accent); color: #fff; }
+.sp-badge.sp-mode-mon   { background: var(--paused); color: #fff; }
+
+/* Pause-mode radio selector (device pause dialog + schedule form): radio on the
+   left, title with its description stacked beneath it. */
+.pause-mode { display: flex; flex-direction: column; gap: 12px; }
+.pause-mode label {
+  display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+}
+.pause-mode input { width: auto; flex: 0 0 auto; margin-top: 3px; accent-color: var(--accent); }
+.pause-mode-text { display: flex; flex-direction: column; gap: 2px; }
+.pause-mode-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.pause-mode-desc { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+.detail-muted-note { margin-top: 6px; font-size: 11.5px; color: var(--text-muted); }
+.ua-item {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.ua-item:last-child { border-bottom: none; }
+.ua-item-body { flex: 1; min-width: 0; }
+.ua-item-when { font-size: 11.5px; color: var(--text-muted); }
+.ua-item-main { font-size: 13px; color: var(--text); margin-top: 2px; }
+
+/* Action color dots on log rows and filter buttons. */
+.ua-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  display: inline-block; background: transparent;
+}
+.ua-item .ua-dot { margin-top: 4px; }
+.ua-dot.added               { background: var(--up); }       /* added device = green */
+.ua-dot.deleted             { background: var(--down); }      /* deleted device = red */
+.ua-dot.changed_monitoring  { background: var(--paused); }    /* pause/resume/schedule/cancel = purple */
+.ua-dot.changed_maintenance { background: var(--accent); }    /* maintenance mark/edit/unmark = blue */
+.ua-dot.other               { background: var(--unknown); }   /* everything else = grey */
+.form-row > label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.form-row .optional { font-weight: 400; }
+
+.form-row > input,
+.form-row > select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
+  width: 100%;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.form-row input:focus,
+.form-row select:focus { outline: none; border-color: var(--accent); }
+.form-row select option { background: var(--surface); }
+
+/* Use a custom caret (native arrow hugs the box edge and ignores padding) so we
+   can inset it, leaving a small buffer between the caret and the box's edge. */
+.form-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.modal-error {
+  background: #4c1515;
+  border: 1px solid var(--down);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+/* "View only" badge shown to non-admin (read-only) users in the header. */
+.view-only-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+  background: var(--surface2, rgba(148, 163, 184, 0.15));
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  cursor: default;
+}
+/* Admin viewer-preview: the badge is present-but-hidden for admins and only shows
+   while previewing; the one rule below hides every edit affordance client-side. */
+.view-only-badge.preview-only { display: none; }
+body.preview-viewer .view-only-badge.preview-only { display: inline-block; }
+body.preview-viewer .admin-only { display: none !important; }
+
+/* Settings modal (hamburger → Settings). */
+.settings-note { font-size: 12px; color: var(--text); margin-bottom: 4px; }
+.settings-section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 4px; }
+.settings-section:first-of-type { border-top: none; padding-top: 0; }
+.settings-section-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text); margin-bottom: 10px;
+}
+/* Keep the settings panel's text brighter (near-white) than the muted default used
+   elsewhere — labels/hints included. */
+#settings-form .form-row > label,
+#settings-form .settings-hint { color: var(--text); }
+/* Individual setting names read lighter than the uppercase section headers. */
+#settings-form .form-row > label { font-weight: 400; }
+/* A setting's description is hidden until its ⓘ icon is clicked, then shown as a small
+   popover pointing up at the icon. Positioned (viewport-fixed) by JS so the scrolling
+   modal-body can't clip it. */
+.info-wrap { position: relative; display: inline-flex; vertical-align: middle; }
+.settings-hint {
+  display: none;
+  position: fixed;
+  z-index: 250;
+  width: 230px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --caret-x: 50%;
+}
+.settings-hint.show { display: block; }
+/* Caret: a bordered triangle pointing up at the icon (down when flipped above). */
+.settings-hint::before, .settings-hint::after {
+  content: ""; position: absolute; left: var(--caret-x);
+  width: 0; height: 0; border: 7px solid transparent;
+}
+.settings-hint::before { bottom: 100%; transform: translateX(-50%); border-bottom-color: var(--border); }
+.settings-hint::after  { bottom: 100%; transform: translateX(-50%); margin-bottom: -1px;
+                         border-width: 6px; border-bottom-color: var(--surface2); }
+.settings-hint.place-above::before { bottom: auto; top: 100%; border-bottom-color: transparent; border-top-color: var(--border); }
+.settings-hint.place-above::after  { bottom: auto; top: 100%; margin-bottom: 0; margin-top: -1px;
+                                     border-bottom-color: transparent; border-top-color: var(--surface2); }
+.info-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; margin-left: 6px; padding: 0;
+  border: none; background: none; color: var(--text-muted);
+  cursor: pointer; vertical-align: middle; flex-shrink: 0;
+}
+.info-toggle svg { width: 14px; height: 14px; }
+.info-toggle:hover, .info-toggle.active { color: var(--accent); }
+
+/* Demo-build disclaimer popup (DEMO_DATA). */
+.demo-modal { max-width: 460px; }
+.demo-modal .modal-body p { margin: 0 0 12px; line-height: 1.5; font-size: 13.5px; }
+.demo-modal .modal-body p:last-child { margin-bottom: 0; }
+.demo-modal-sub { color: var(--text-muted); }
+
+/* Deleted Devices page (hamburger → Deleted devices). */
+.deleted-list { display: flex; flex-direction: column; gap: 6px; }
+.deleted-item {
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left; width: 100%;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; cursor: pointer; color: var(--text);
+}
+.deleted-item:hover { border-color: var(--accent); }
+.deleted-name { font-weight: 600; font-size: 13px; }
+.deleted-meta { font-size: 11px; color: var(--text-muted); }
+.settings-section .form-row { margin-bottom: 14px; }
+.settings-section .form-row:last-child { margin-bottom: 0; }
+.settings-section .form-row > input[type="number"] { max-width: 140px; }
+.settings-toggle-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+}
+.settings-toggle-row > input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;
+  justify-self: end;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;   /* stay pinned at the bottom; only the body scrolls */
+}
+/* Pause confirm (3 buttons): "Pause now" | "Schedule a pause" | "Cancel". */
+.modal-footer.confirm-reordered #confirm-accept { order: 1; }
+.modal-footer.confirm-reordered #confirm-extra  { order: 2; }
+.modal-footer.confirm-reordered #confirm-cancel { order: 3; }
+
+.btn-primary { background: var(--accent); border-color: var(--accent); }
+.btn-primary:hover { background: #2563eb; border-color: #2563eb; }
+
+.btn-danger { background: var(--down); border-color: var(--down); color: #fff; }
+.btn-danger:hover { background: #dc2626; border-color: #dc2626; }
+
+/* Soft buttons: lighter than the detail-panel (surface2) background. */
+.btn-soft { background: #353c54; border-color: #434c6a; color: var(--text); }
+.btn-soft:hover { background: #404a68; border-color: #4d5882; }
+
+/* Pause = amber, Resume = green. */
+.btn-edit { background: var(--warn); border-color: var(--warn); color: var(--um-blue); }
+.btn-edit:hover { background: #d4a008; border-color: #d4a008; }
+.btn-pause { background: var(--paused); border-color: var(--paused); color: #fff; }
+.btn-pause:hover { background: #9333ea; border-color: #9333ea; }
+.btn-resume { background: var(--up); border-color: var(--up); color: #0c1f14; }
+.btn-resume:hover { background: #1aa34a; border-color: #1aa34a; }
+/* Schedule event — purple, outlined so it stays distinct from the solid purple
+   Pause-monitoring button directly above it. */
+.btn-schedule { background: transparent; border-color: var(--paused); color: var(--paused); }
+.btn-schedule:hover { background: var(--paused); border-color: var(--paused); color: #fff; }
+
+/* Save-note button (shown only when the note has unsaved changes) is green. */
+#note-save { background: var(--up); border-color: var(--up); color: #0c1f14; }
+#note-save:hover { background: #1aa34a; border-color: #1aa34a; }
+
+/* ── Confirm dialog ──────────────────────────────── */
+#modal-delete { margin-right: auto; }   /* push Delete to the left of the footer */
+#confirm-overlay { z-index: 300; }       /* above the edit modal when both open */
+
+.confirm-modal { width: 380px; }
+.confirm-modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.confirm-modal p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.confirm-modal p strong { color: var(--text); }
+
+/* ── Detail panel actions (view log / delete) ────── */
+.detail-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+.detail-actions .btn { flex: 1; justify-content: center; }
+
+/* "View recent activity" button, above the notes section */
+.detail-activity { margin-top: 12px; }
+.detail-activity .btn { width: 100%; justify-content: center; }
+
+/* ── Activity log modal ──────────────────────────── */
+.log-modal {
+  width: 640px;
+  max-width: calc(100vw - 32px);
+  /* Open at a fixed size right away (before items load) so the modal doesn't grow
+     as content streams in; the body scrolls within it. */
+  height: min(680px, calc(100vh - 80px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+}
+/* Centered spinner shown in a log pane while its data loads. */
+.log-loading { display: flex; align-items: center; justify-content: center; min-height: 240px; flex: 1; }
+.log-spinner {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  animation: log-spin 0.8s linear infinite;
+}
+@keyframes log-spin { to { transform: rotate(360deg); } }
+.log-modal .modal-header { justify-content: space-between; }
+.log-title { font-size: 15px; font-weight: 600; flex: 1; }
+#log-export { padding: 5px 10px; font-size: 12px; }
+
+/* Tab bar for the site-wide logs view (Device Logs / User Activity / Scheduled Pauses). */
+.log-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+/* Each tab's content fills the modal; its inner .log-body scrolls. */
+.log-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.sp-pane-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ev-edit-toolbar { display: flex; align-items: center; gap: 8px; flex: 1; }
+.ev-sel-count { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+.ev-check { margin-right: 4px; flex-shrink: 0; }
+.ev-event-item.clickable { cursor: pointer; }
+.ev-event-item.clickable:hover { background: var(--surface2); }
+.ev-pause-item { opacity: 0.85; }
+.ev-detail-cat { display: flex; align-items: center; gap: 8px; margin: 8px 0 6px; font-size: 16px; }
+.ev-detail-desc { color: var(--text-muted); margin-bottom: 8px; }
+.ev-detail-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* Keep the event-detail actions (Edit / Delete / Save) pinned to the bottom of the
+   popup so they're always visible without scrolling. Full-bleed over the body padding;
+   the body's bottom padding is removed so the bar sits flush with the popup edge. */
+#ev-detail-overlay .modal-body { padding-bottom: 0; }
+#ev-detail-overlay .ev-detail-actions {
+  position: sticky;
+  bottom: 0;
+  margin: 12px -16px 0;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 1;
+}
+.ev-detail-activity { margin-top: 14px; }
+.ev-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ev-section-head .btn { padding: 4px 10px; font-size: 12px; }
+.ev-detail-log { margin-top: 6px; max-height: 240px; overflow-y: auto; }
+/* Right-aligned event tag(s) marking a log entry as part of an event (an overlay). A
+   blue circle with a category icon; sits at the far right of the log row. */
+.log-event-tags { display: inline-flex; gap: 5px; flex-shrink: 0; margin-left: 8px; align-self: center; }
+.log-event-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; border: none; cursor: pointer;
+  border-radius: 50%; background: var(--accent); color: #fff;
+  transition: filter 0.12s;
+}
+.log-event-tag:hover { filter: brightness(1.15); }
+.log-event-tag svg { width: 12px; height: 12px; }
+/* Sidebar event symbol: same blue circle + category icon as the log tag (view-only). */
+.device-event-icon {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+}
+.device-event-icon svg { width: 11px; height: 11px; }
+.modal-footer-spacer { flex: 1; }
+.ev-inline-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 8px 0; cursor: pointer; color: var(--text-muted); }
+
+.log-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.log-filters label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.log-filters input { accent-color: var(--accent); cursor: pointer; }
+/* Dots identify the event colors in the filter menu; the 5px top margin is for
+   aligning next to multi-line log entries, so drop it in these single-line labels. */
+.log-filters label .log-cat-dot { margin-top: 0; }
+
+/* Compact "Filters" dropdown that replaces the always-open checkbox rows. The
+   checkboxes themselves are unchanged (all filter logic reads them by selector);
+   they're just tucked into a popover to reclaim vertical space. */
+.log-filter-bar {
+  position: relative;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.filter-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.filter-dropdown-btn:hover,
+.filter-dropdown-btn.has-active { border-color: var(--accent); }
+.filter-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.filter-count-badge[hidden] { display: none; }
+.filter-popover {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 16px;
+  z-index: 30;
+  min-width: 220px;
+  max-width: calc(100vw - 40px);
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.filter-popover[hidden] { display: none; }
+/* Neutralize the panels' own bar borders/padding now that they sit inside a popover. */
+#log-filter-popover .log-filters { padding: 0; border-bottom: none; }
+#log-filter-popover .log-filters + .log-filters { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ua-filters.filter-popover {
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: none;
+}
+
+.log-body { padding: 12px 16px; overflow-y: auto; flex: 1; min-height: 0; }
+
+/* Small date subtitle separating one day's log entries from the next. */
+.log-day {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  padding: 8px 0 5px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.log-day:first-child { margin-top: 0; padding-top: 2px; border-top: none; }
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry.clickable { cursor: pointer; border-radius: 5px; }
+.log-entry.clickable:hover { background: var(--surface2); }
+.log-text { flex: 1; }
+
+.log-cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+/* Dot color by event type. */
+.log-cat-dot.down         { background: var(--warn); }     /* offline = yellow */
+.log-cat-dot.tracked      { background: var(--up); }       /* new device = green */
+.log-cat-dot.unknown      { background: #ffffff; }         /* unknown = white */
+.log-cat-dot.paused       { background: var(--paused); }   /* paused = purple */
+.log-cat-dot.app_downtime { background: var(--down); }     /* app downtime = red */
+.log-cat-dot.maintenance        { background: var(--accent); }  /* maintenance = blue */
+.log-cat-dot.lightning          { background: #eab308; }        /* lightning = yellow */
+.log-cat-dot.power_outage       { background: var(--down); }    /* power outage = red */
+.log-cat-dot.scheduled_downtime { background: var(--paused); }  /* scheduled downtime = purple */
+.log-cat-dot.other              { background: var(--unknown); } /* other = grey */
+.log-cat-dot.deleted            { background: var(--unknown); } /* device deleted = grey */
+.log-cat-dot.event              { background: var(--accent); }  /* event-related = blue */
+.log-cat-dot.frequent           { background: var(--warn); }    /* frequent-outage = amber */
+
+/* Maintenance actions on a log row (Mark / Edit / Unmark). */
+.log-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+  opacity: 0;                       /* only shown while hovering the row */
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.log-entry:hover .log-actions { opacity: 1; pointer-events: auto; }
+.log-action {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.log-action:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+.log-action.log-del-pause { color: var(--danger, #e5534b); border-color: rgba(229, 83, 75, 0.5); }
+.log-action.log-del-pause:hover { background: rgba(229, 83, 75, 0.14); color: #ff6b61; border-color: var(--danger, #e5534b); }
+.maint-hint { font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-bottom: 4px; }
+.muted-note { font-size: 12px; color: var(--text-muted); line-height: 1.45; margin: 0 0 12px; }
+
+.log-tracked { font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+.log-section { margin-bottom: 14px; }
+.log-section h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.log-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+.log-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Last-updated footer ─────────────────────────── */
+#last-updated {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* The hamburger and the device-count dropdown were reordered within the header so
+   the layout can differ on mobile (see the media query) WITHOUT changing desktop.
+   `.header-stats` still carries margin-left:auto, so these `order`s reproduce the
+   original desktop cluster exactly: [#devices · View Log · Check Now · hamburger]. */
+header > .header-stats { order: 1; }
+header > .menu         { order: 2; }   /* hamburger last, on desktop */
+#stat-dropdown         { order: -1; }  /* #devices first in the cluster, on desktop */
+
+/* Mobile bottom view-toggle: hidden on desktop, shown inside the media query. */
+.view-toggle { display: none; }
+/* Flex line-break helper: a no-op on desktop; forces a row wrap on mobile (below). */
+.hdr-break { display: none; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Mobile (≤768px) ONLY. Desktop layout above is untouched.
+   • Header row 1: [Network Monitor ·········· hamburger]
+     then flowing / wrapping dynamically: location · #up · View Log · Check Now
+   • The map and the devices list are separate full-screen views, toggled from a
+     fixed bottom bar. Edit Map stays bottom-left on the map view.
+   ════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  header {
+    height: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    gap: 8px;
+  }
+  header h1 { order: 0; font-size: 16px; }          /* title back, top-left */
+  header > .menu { order: 1; margin-left: auto; }   /* hamburger, top-right */
+  .hdr-break { display: block; order: 2; flex-basis: 100%; height: 0; margin: 0; }  /* ends row 1 */
+  /* Ungroup the toolbar buttons: display:contents dissolves the .header-stats box so
+     its children join the header's flex-wrap directly and each wraps on its own (so
+     e.g. location + #up can sit alone on a row). Ordered individually below. */
+  header > .header-stats { display: contents; }
+  #site-dropdown { order: 3; }                       /* location */
+  #stat-dropdown { order: 4; margin-left: 0; }       /* # up/down */
+  #btn-view-log  { order: 5; }                       /* View Log */
+  #btn-check-now { order: 6; }                       /* Check Now */
+
+  /* The four toolbar controls form a tidy 2-up grid under the title row:
+     [ location | # up/down ] then [ View Log | Check Now ] — even widths + heights
+     instead of the old free-flow wrap that looked haphazard. */
+  #site-dropdown, #stat-dropdown, #btn-view-log, #btn-check-now {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+  #site-dropdown > .stat-summary,
+  #stat-dropdown > .stat-summary,
+  #btn-view-log, #btn-check-now {
+    width: 100%;
+    height: 40px;
+  }
+  /* Dropdown triggers: label left, chevron pinned right; action buttons centered. */
+  #site-dropdown .stat-summary .chevron,
+  #stat-dropdown .stat-summary .chevron { margin-left: auto; }
+  #site-summary-text, #stat-summary-text {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #btn-view-log, #btn-check-now { justify-content: center; }
+
+  /* View Log + Check Now move into the hamburger on mobile to save toolbar space. */
+  #btn-view-log, #btn-check-now { display: none; }
+  .menu-item.mobile-only { display: block; }
+
+  /* One view at a time; each fills the width. Default (no body class) = map. */
+  #map-container, #sidebar { width: 100%; }
+  #sidebar { border-left: none; padding-bottom: 60px; }
+  #sidebar-resizer { display: none; }   /* full-width panes on mobile — no resize */
+  body:not(.view-list) #sidebar { display: none; }
+  body.view-list #map-container { display: none; }
+  body.view-list #sidebar { display: flex; }
+
+  /* Single-device panel → full-screen overlay (overrides the JS-set inline box). */
+  #detail-panel.visible {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important;
+    border-left: none;
+    overflow-y: auto;
+    z-index: 70;                 /* above the toggle bar (and the tooltip) */
+  }
+
+  /* Touch has no hover, so the map tooltip only ever ends up stuck over the tapped
+     node / the open detail panel — suppress it on mobile. */
+  #tooltip { display: none !important; }
+
+  /* Stack the date + time pickers instead of side-by-side — they don't fit on a
+     narrow screen and were overlapping (Schedule a pause / Mark maintenance forms). */
+  .sp-datetime { flex-direction: column; }
+
+  /* Larger, more legible detail-panel text; the device name is proportionally the
+     biggest. The action buttons (View recent activity / Check now / Edit device /
+     Pause monitoring) and the close ✕ are .btn / .detail-close and set their own
+     font-size, so they're intentionally left unchanged. */
+  #detail-panel h3   { font-size: 21px; }   /* device name */
+  .detail-row        { font-size: 15px; }
+  .ap-child          { font-size: 14px; }
+  .notes-block label { font-size: 14px; }
+  .detail-muted-note { font-size: 13px; }
+
+  /* Map controls: position them FIXED (same reference as the toggle bar) and above
+     it, bottom-left. As an absolute child of #map-container they'd be measured from
+     that element's 100vh box — which extends behind the browser chrome on iOS — so
+     they'd never actually clear the fixed toggle. Fixed + a higher z-index fixes
+     that. Still hidden in list view (their #map-container parent is display:none). */
+  .map-controls {
+    position: fixed;
+    left: 16px;
+    right: 16px;                                             /* so buttons can wrap */
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));   /* toggle + gap */
+    z-index: 45;                                             /* above the toggle */
+    flex-direction: column-reverse;   /* toggle stays at the bottom; controls stack up */
+    align-items: flex-start;
+  }
+  /* Collapse the row behind one icon; #map-ctl-toggle expands it via body.map-ctl-open. */
+  #map-ctl-toggle { display: inline-flex; }
+  body:not(.map-ctl-open) .map-controls > .btn:not(#map-ctl-toggle) { display: none; }
+
+  /* The imagery credit is hidden on mobile to keep the small map view uncluttered. */
+  #map-attrib { display: none !important; }
+
+  /* Drag-precise placement tools are impractical on touch — keep only Recenter and
+     Set opening view (plus Edit Map). Hide Select / Stack all / Set map area. */
+  #btn-select, #btn-gather, #btn-map-area { display: none !important; }
+  #map-area-hint {
+    left: 12px;
+    right: 12px;
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Fixed bottom toggle bar. Its 52px content area sits above the iOS home
+     indicator (the safe-area padding). */
+  .view-toggle {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: calc(52px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 40;
+  }
+  .view-toggle button {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    background: none; border: none;
+    color: var(--text-muted);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .view-toggle button.active { color: var(--accent); }
+
+  /* Activity log fills the whole screen on mobile so there's room for the entries
+     without the desktop side margins. */
+  .log-modal {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+}
+
+/* Transient popups (bottom-right) — e.g. "Check now" completion. */
+#toast-host {
+  position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  max-width: 320px; padding: 12px 14px; border-radius: 8px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 13px; line-height: 1.45; white-space: pre-line; cursor: pointer;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast-up   { border-left-color: var(--up); }
+.toast-down { border-left-color: var(--down); }
+.toast-info { border-left-color: var(--accent); }

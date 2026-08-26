@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in · Network Monitor</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    .login-card h1 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.15rem;
+      margin: 0 0 4px;
+    }
+    .login-card p.sub {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 0 0 22px;
+    }
+    .login-card label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .login-card input[type="password"] {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 11px 12px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .login-card input[type="password"]:focus { border-color: var(--accent); }
+    .login-card button {
+      width: 100%;
+      margin-top: 18px;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 11px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .login-card button:hover { filter: brightness(1.1); }
+    .login-error {
+      margin-top: 14px;
+      color: var(--down);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .login-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 6px;
+      text-align: center;
+      text-decoration: none;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 11px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .login-btn:hover { filter: brightness(1.1); }
+    .login-alt {
+      display: block;
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3"/>
+        </svg>
+        Network Monitor
+      </h1>
+
+      {% if okta %}
+      <p class="sub">Sign in to continue.</p>
+      {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+      <a class="login-btn" href="{{ url_for('main.login') }}">Sign in with U-M</a>
+      {% if denied %}
+      <a class="login-alt" href="{{ url_for('main.logout') }}">Sign out &amp; use a different account</a>
+      {% endif %}
+      {% else %}
+      <p class="sub">Enter the password to continue.</p>
+      <form method="POST" action="">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" autofocus />
+        <button type="submit">Sign in</button>
+      </form>
+      {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

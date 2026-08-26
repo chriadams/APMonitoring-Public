@@ -1,0 +1,198 @@
+# Demo seed topology — FAKE data for public demos.
+# IPs are RFC-5737 documentation ranges (never routable). Names/locations are invented.
+
+# ── Switches (also pinged for uptime) ──
+switches:
+  - name: "sw-north-hall-1"
+    ip: "192.0.2.1"
+    x: 367.3
+    y: -126.7
+    location: "North Hall Switch"
+
+  - name: "sw-south-hall-1"
+    ip: "192.0.2.2"
+    x: -70.0
+    y: 57.6
+    location: "South Hall Switch"
+
+  - name: "sw-commons-1"
+    ip: "192.0.2.3"
+    x: 483.8
+    y: 479.3
+    location: "Commons Switch"
+
+  - name: "sw-lakeview-1"
+    ip: "192.0.2.4"
+    x: 670.6
+    y: -69.1
+    location: "Lakeview Switch"
+
+  - name: "sw-field-house-1"
+    ip: "192.0.2.5"
+    x: 106.3
+    y: -122.3
+    location: "Field House Switch"
+
+# ── Access points ──
+devices:
+  - name: "ap-north-hall-1"
+    ip: "198.51.100.10"
+    switch: "sw-north-hall-1"
+    x: -147.5
+    y: 417.9
+    location: "North Hall AP 1"
+
+  - name: "ap-north-hall-2"
+    ip: "198.51.100.11"
+    switch: "sw-north-hall-1"
+    x: 279.6
+    y: 527.4
+    location: "North Hall AP 2"
+
+  - name: "ap-north-hall-3"
+    ip: "198.51.100.12"
+    switch: "sw-north-hall-1"
+    x: 461.7
+    y: 242.7
+    location: "North Hall AP 3"
+
+  - name: "ap-north-hall-4"
+    ip: "198.51.100.13"
+    switch: "sw-north-hall-1"
+    x: 134.0
+    y: 107.1
+    location: "North Hall AP 4"
+
+  - name: "ap-south-hall-1"
+    ip: "198.51.100.14"
+    switch: "sw-south-hall-1"
+    x: 536.4
+    y: -6.7
+    location: "South Hall AP 1"
+
+  - name: "ap-south-hall-2"
+    ip: "198.51.100.15"
+    switch: "sw-south-hall-1"
+    x: 99.4
+    y: 106.8
+    location: "South Hall AP 2"
+
+  - name: "ap-south-hall-3"
+    ip: "198.51.100.16"
+    switch: "sw-south-hall-1"
+    x: -170.1
+    y: 573.0
+    location: "South Hall AP 3"
+
+  - name: "ap-south-hall-4"
+    ip: "198.51.100.17"
+    switch: "sw-south-hall-1"
+    x: -317.1
+    y: 204.7
+    location: "South Hall AP 4"
+
+  - name: "ap-commons-1"
+    ip: "198.51.100.18"
+    switch: "sw-commons-1"
+    x: 651.7
+    y: 419.6
+    location: "Commons AP 1"
+
+  - name: "ap-commons-2"
+    ip: "198.51.100.19"
+    switch: "sw-commons-1"
+    x: 599.3
+    y: 540.5
+    location: "Commons AP 2"
+
+  - name: "ap-commons-3"
+    ip: "198.51.100.20"
+    switch: "sw-commons-1"
+    x: 247.1
+    y: 774.2
+    location: "Commons AP 3"
+
+  - name: "ap-commons-4"
+    ip: "198.51.100.21"
+    switch: "sw-commons-1"
+    x: 42.1
+    y: 370.0
+    location: "Commons AP 4"
+
+  - name: "ap-commons-5"
+    ip: "198.51.100.22"
+    switch: "sw-commons-1"
+    x: 628.2
+    y: 433.8
+    location: "Commons AP 5"
+
+  - name: "ap-lakeview-1"
+    ip: "198.51.100.23"
+    switch: "sw-lakeview-1"
+    x: 300.6
+    y: 516.4
+    location: "Lakeview AP 1"
+
+  - name: "ap-lakeview-2"
+    ip: "198.51.100.24"
+    switch: "sw-lakeview-1"
+    x: -390.4
+    y: 58.8
+    location: "Lakeview AP 2"
+
+  - name: "ap-lakeview-3"
+    ip: "198.51.100.25"
+    switch: "sw-lakeview-1"
+    x: -73.8
+    y: -83.4
+    location: "Lakeview AP 3"
+
+  - name: "ap-lakeview-4"
+    ip: "198.51.100.26"
+    switch: "sw-lakeview-1"
+    x: -147.4
+    y: -63.0
+    location: "Lakeview AP 4"
+
+  - name: "ap-lakeview-5"
+    ip: "198.51.100.27"
+    switch: "sw-lakeview-1"
+    x: -88.6
+    y: 450.3
+    location: "Lakeview AP 5"
+
+  - name: "ap-field-house-1"
+    ip: "198.51.100.28"
+    switch: "sw-field-house-1"
+    x: -238.5
+    y: 181.1
+    location: "Field House AP 1"
+
+  - name: "ap-field-house-2"
+    ip: "198.51.100.29"
+    switch: "sw-field-house-1"
+    x: 421.2
+    y: 513.7
+    location: "Field House AP 2"
+
+  - name: "ap-field-house-3"
+    ip: "198.51.100.30"
+    switch: "sw-field-house-1"
+    x: 438.6
+    y: -91.5
+    location: "Field House AP 3"
+
+  - name: "ap-field-house-4"
+    ip: "198.51.100.31"
+    switch: "sw-field-house-1"
+    x: 375.5
+    y: 352.8
+    location: "Field House AP 4"
+
+  - name: "ap-field-house-5"
+    ip: "198.51.100.32"
+    switch: "sw-field-house-1"
+    x: -131.7
+    y: 283.8
+    location: "Field House AP 5"
+

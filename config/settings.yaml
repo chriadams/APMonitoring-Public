@@ -1,0 +1,44 @@
+polling:
+  interval_minutes: 60      # How often to ping all devices
+  ping_count: 3              # Number of pings sent per check
+  ping_timeout: 5            # Seconds to wait per ping attempt
+
+slack:
+  enabled: true
+  # The real webhook is provided ONLY via the SLACK_WEBHOOK_URL env var (Heroku
+  # config var) — never commit it. This placeholder is treated as "unconfigured"
+  # (Slack disabled) so a leaked repo can't post to the channel.
+  webhook_url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+  # One message per check cycle listing ALL currently-down devices.
+  alert_on_recovery: true   # Post "all clear" message when everything is back up
+  reminder_hours: 6         # Send ONE louder "still down" escalation after a
+                            # device has been down this long. 0 disables it.
+
+monitoring:
+  # A device flips to "down" (and alerts) only after this many consecutive down
+  # checks; recovery to "up" is immediate. Confirming a down absorbs transient
+  # blips and keeps things flap-free when MULTIPLE agents ping the same devices.
+  # 1 = alert on the first down (no confirmation).
+  down_confirm_checks: 2
+
+server:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+# Physical locations. Each has its own device list, map, and pinging agent.
+# The first entry is the default view. Each site's agent authenticates with
+# AGENT_TOKEN_<KEY> (e.g. AGENT_TOKEN_LOCATION_A); the default site also
+# accepts the plain AGENT_TOKEN for backward compatibility.
+sites:
+  - key: location-a
+    name: Location A
+  - key: location-b
+    name: Location B
+
+logging:
+  # The activity log ("View Log") shows events from this date onward (midnight
+  # Eastern), accumulating forward. Older ping history stays in the DB — this is
+  # just a display floor. Change the date to shift the window; clear it to show
+  # all history.
+  start_date: "2026-06-25"

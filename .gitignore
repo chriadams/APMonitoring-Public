@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+data/*.db
+config/devices_extra.yaml
+.env
+venv/
+.venv/
+.venv-dev/
+.DS_Store
+
+# Source aerial rasters (~17 MB each). Only the generated tile pyramid under
+# static/basemap/ is needed at runtime, and it IS committed (Heroku serves static
+# files from the slug). Regenerate a source with maps/fetch_imagery.py, then
+# maps/build_tiles.py.
+maps/*.jpg
+maps/*.png
